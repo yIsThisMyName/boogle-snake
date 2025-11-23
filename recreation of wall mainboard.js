@@ -406,7 +406,7 @@ function runSimulation(){
 
 // for manual play
 document.addEventListener("keydown", function(a){
-  if(a.code === "ArrowLeft"){
+  if(a.code === "ArrowLeft"||a.code === "KeyA"){
     if(!(direction===1)){
       game_started = true;
     }
@@ -414,7 +414,7 @@ document.addEventListener("keydown", function(a){
       inputBuffer.push(3);
     }
   }
-  if(a.code === "ArrowUp"){
+  if(a.code === "ArrowUp"||a.code === "KeyW"){
     if(!(direction===2)){
       game_started = true;
     }
@@ -422,7 +422,7 @@ document.addEventListener("keydown", function(a){
       inputBuffer.push(0);
     }
   }
-  if(a.code === "ArrowRight"){
+  if(a.code === "ArrowRight"||a.code === "KeyD"){
     if(!(direction===3)){
       game_started = true;
     }
@@ -430,7 +430,7 @@ document.addEventListener("keydown", function(a){
       inputBuffer.push(1);
     }
   }
-  if(a.code === "ArrowDown"){
+  if(a.code === "ArrowDown"||a.code === "KeyS"){
     if(!(direction===0)){
       game_started = true;
     }
@@ -446,4 +446,5 @@ let a = setInterval(function(){
   if(game_started){
     snake_move();
   }
+
 }, tileTimeInMs);
