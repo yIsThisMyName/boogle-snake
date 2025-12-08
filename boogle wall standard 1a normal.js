@@ -556,7 +556,9 @@ function snake_move(){
     }
   }
   draw_stuff();
-  renderPath();
+  if(simulationOn){
+    renderPath();
+  }
 
   if(snake_body[0][1]<0||snake_body[0][1]>mapWidth-1||snake_body[0][2]<0||snake_body[0][2]>mapHeight-1){
     clearInterval(a);
