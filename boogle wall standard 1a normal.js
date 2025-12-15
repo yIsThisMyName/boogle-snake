@@ -73,10 +73,15 @@ var astar = {
       for (var i = 0, il = neighbors.length; i < il; ++i) {
         var neighbor = neighbors[i];
 
-        if (neighbor.closed || neighbor.isWall()) {
+        if (neighbor.closed) {
           // Not a valid node to process, skip to next neighbor.
           continue;
         }
+        if (neighbor.isWall(currentNode.g+neighbor.getCost(currentNode))) {
+          // Not a valid node to process, skip to next neighbor.
+          continue;
+        }
+        
 
         // The g score is the shortest distance from start to current node.
         // We need to check if the path we have arrived at this neighbor is the shortest one we have seen yet.
@@ -146,10 +151,11 @@ var astar = {
 /**
  * A graph memory structure
  * @param {Array} gridIn 2D array of input weights
+ * @param {Array} iScoresGrid 2D array of i scores for snake body
  * @param {Object} [options]
  * @param {bool} [options.diagonal] Specifies whether diagonal moves are allowed
  */
-function Graph(gridIn, options) {
+function Graph(gridIn, iScoresGrid, options) {
   options = options || {};
   this.nodes = [];
   this.diagonal = !!options.diagonal;
@@ -157,8 +163,8 @@ function Graph(gridIn, options) {
   for (var x = 0; x < gridIn.length; x++) {
     this.grid[x] = [];
 
-    for (var y = 0, row = gridIn[x]; y < row.length; y++) {
-      var node = new GridNode(x, y, row[y]);
+    for (var y = 0, row = gridIn[x], row2 = iScoresGrid[x]; y < row.length; y++) {
+      var node = new GridNode(x, y, row[y], row2[y]);
       this.grid[x][y] = node;
       this.nodes.push(node);
     }
@@ -249,10 +255,11 @@ Graph.prototype.toString = function() {
   return graphString.join("\n");
 };
 
-function GridNode(x, y, weight) {
+function GridNode(x, y, weight, i) {
   this.x = x;
   this.y = y;
   this.weight = weight;
+  this.i = i
 }
 
 GridNode.prototype.toString = function() {
@@ -267,8 +274,8 @@ GridNode.prototype.getCost = function(fromNeighbor) {
   return this.weight;
 };
 
-GridNode.prototype.isWall = function() {
-  return this.weight === 0;
+GridNode.prototype.isWall = function(gScore) {
+  return this.weight === 0 && (this.i === -1 || (this.i >= gScore));
 };
 
 function BinaryHeap(scoreFunction) {
@@ -484,6 +491,9 @@ function draw_stuff(){
   /*for(let i = 0;i<impossibleWallSpawns.length;i++){
     createTile(impossibleWallSpawns[i][0],impossibleWallSpawns[i][1],"#eeff00ff");
   }*/
+  if(simulationOn){
+    renderPath();
+  }
   for(let i = 0; i<snake_body.length; i++){
     if(snake_body[i][0] == "h"){
       createTile(snake_body[i][1],snake_body[i][2],"#8400ffff");
@@ -505,7 +515,7 @@ function snake_move(){
     console.log("your 25 time: "+(tileCount*tileTimeInMs/1000).toFixed(3));
   }*/
   if(simulationOn){
-    let nextTile = path[(path.findIndex(row => row.x===snake_body[0][1]&&row.y===snake_body[0][2]))+1];
+    let nextTile = path[(path.findIndex(row=>row.x===snake_body[0][1]&&row.y===snake_body[0][2]))+1];
     if(nextTile.x-snake_body[0][1]===1){
       direction = 1;
     } else if(nextTile.x-snake_body[0][1]===-1){
@@ -517,7 +527,7 @@ function snake_move(){
     } else{
       console.error("could not find direction");
     }
-    path.splice((path.findIndex(row => row.x===snake_body[0][1]&&row.y===snake_body[0][2]))+1,1);
+    path.splice((path.findIndex(row=>row.x===snake_body[0][1]&&row.y===snake_body[0][2]))+1,1);
   }else{
     if(inputBuffer.length>0){
       if(!((inputBuffer[0]+2)%4===direction)){
@@ -556,9 +566,6 @@ function snake_move(){
     }
   }
   draw_stuff();
-  if(simulationOn){
-    renderPath();
-  }
 
   if(snake_body[0][1]<0||snake_body[0][1]>mapWidth-1||snake_body[0][2]<0||snake_body[0][2]>mapHeight-1){
     clearInterval(a);
@@ -793,19 +800,28 @@ function createTile(x, y, color){
 function calculatePath(){
   // reset variables
   let gameGraph = [];
+  let snakeBodyGraph = [];
   let currentRow = [];
+  let currentRow2 = [];
   for(let i = 0; i<mapWidth; i++){
     currentRow = [];
+    currentRow2 = [];
     for(let j = 0; j<mapHeight; j++){
       if(walls.some(row=>row[0]===i&&row[1]===j)||snake_body.some(row=>row[1]===i&&row[2]===j)){
         currentRow.push(0);
       } else {
         currentRow.push(1);
       }
+      if(snake_body.some(row=>row[1]===i&&row[2]===j)){
+        currentRow2.push(snake_body.length-snake_body.findIndex(row=>row[1]===i&&row[2]===j)); // gets how far away from the last item the snake body part is
+      } else {
+        currentRow2.push(-1);
+      }
     }
     gameGraph.push(currentRow);
+    snakeBodyGraph.push(currentRow2);
   }
-  gameGraph = new Graph(gameGraph);
+  gameGraph = new Graph(gameGraph, snakeBodyGraph);
   let start = gameGraph.grid[snake_body[0][1]][snake_body[0][2]];
   let end = gameGraph.grid[apples[0][0]][apples[0][1]];
   path = astar.search(gameGraph, start, end);
@@ -827,7 +843,7 @@ function runSimulationDemo(){
 
 /*
 notes:
-make astar account for tail moving out of the way
+make astar account for tail moving out of the way (basically done)
 make it not trap itself
 */
 
